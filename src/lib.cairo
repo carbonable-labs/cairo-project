@@ -35,7 +35,7 @@ mod Project {
     const IERC721_RECEIVER_ID: felt252 = 0x150b7a02;
     const IERC721_METADATA_ID: felt252 = 0x5b5e139f;
     const IERC721_ENUMERABLE_ID: felt252 = 0x780e9d63;
-    const IMPL_HASH: felt252 = 0x0687acd1aa9dca381b305dcc7dfe1b8550fca9d2d7f81c9947c14a14149e9ef4;
+    const IMPL_HASH: felt252 = 0x3864314828c08e9fd591506b9eebac815ff1584124c3db9059530a4617b7277;
 
     #[storage]
     struct Storage {
@@ -114,13 +114,13 @@ mod Project {
         self.initializer(name, symbol, owner);
     }
 
-    #[external(v0)]
     #[generate_trait]
+    #[external(v0)]
     impl UpgradeableImpl of UpgradeableTrait {
-        fn getImplementationHash(ref self: ContractState) -> felt252 {
+        fn getImplementationHash(self: @ContractState) -> felt252 {
             self.get_implementation_hash()
         }
-        fn getAdmin(ref self: ContractState) -> ContractAddress {
+        fn getAdmin(self: @ContractState) -> ContractAddress {
             self.get_admin()
         }
         fn upgrade(ref self: ContractState, new_implementation: felt252) {
@@ -133,14 +133,14 @@ mod Project {
         }
         fn restore(ref self: ContractState) {
             self.assert_only_admin();
-            self.Proxy_implementation_address.write(IMPL_HASH);
+            self._set_implementation_hash(IMPL_HASH);
         }
     }
 
-    #[external(v0)]
     #[generate_trait]
+    #[external(v0)]
     impl OwnableImpl of OwnableTrait {
-        fn owner(ref self: ContractState) -> ContractAddress {
+        fn owner(self: @ContractState) -> ContractAddress {
             self.Ownable_owner.read()
         }
         fn transferOwnership(ref self: ContractState, newOwner: ContractAddress) {
