@@ -8,7 +8,13 @@ trait IERC165<TContractState> {
 
 #[starknet::interface]
 trait IERC721Receiver<TContractState> {
-    fn onERC721Received(ref self: TContractState, operator: ContractAddress, from: ContractAddress, tokenId: u256, data: Span<felt252>) -> felt252;
+    fn onERC721Received(
+        ref self: TContractState,
+        operator: ContractAddress,
+        from: ContractAddress,
+        tokenId: u256,
+        data: Span<felt252>
+    ) -> felt252;
 }
 
 #[starknet::contract]
@@ -23,8 +29,8 @@ mod Project {
     use starknet::get_caller_address;
 
     // Local deps
-    use super::{IERC165Dispatcher, IERC165DispatcherTrait}; 
-    use super::{IERC721ReceiverDispatcher, IERC721ReceiverDispatcherTrait}; 
+    use super::{IERC165Dispatcher, IERC165DispatcherTrait};
+    use super::{IERC721ReceiverDispatcher, IERC721ReceiverDispatcherTrait};
 
     // Constants
 
@@ -106,10 +112,7 @@ mod Project {
 
     #[constructor]
     fn constructor(
-        ref self: ContractState,
-        name: felt252,
-        symbol: felt252,
-        owner: ContractAddress,
+        ref self: ContractState, name: felt252, symbol: felt252, owner: ContractAddress,
     ) {
         self.initializer(name, symbol, owner);
     }
@@ -209,7 +212,9 @@ mod Project {
         fn getApproved(self: @ContractState, tokenId: u256) -> ContractAddress {
             self.get_approved(tokenId)
         }
-        fn isApprovedForAll(self: @ContractState, owner: ContractAddress, operator: ContractAddress) -> bool {
+        fn isApprovedForAll(
+            self: @ContractState, owner: ContractAddress, operator: ContractAddress
+        ) -> bool {
             self.is_approved_for_all(owner, operator)
         }
         fn approve(ref self: ContractState, to: ContractAddress, tokenId: u256) {
@@ -217,7 +222,10 @@ mod Project {
             assert(!caller.is_zero(), 'ERC721: caller is zero address');
             let owner = self.owner_of(tokenId);
             assert(to != owner, 'ERC721: approval to owner');
-            assert(caller == owner || self.is_approved_for_all(owner, caller), 'ERC721: not owner nor approved');
+            assert(
+                caller == owner || self.is_approved_for_all(owner, caller),
+                'ERC721: not owner nor approved'
+            );
             self._approve(to, tokenId);
         }
         fn setApprovalForAll(ref self: ContractState, operator: ContractAddress, approved: bool) {
@@ -226,15 +234,28 @@ mod Project {
             assert(!operator.is_zero(), 'ERC721: operator is zero');
             assert(operator != caller, 'ERC721: approve to caller');
             self.ERC721_operator_approvals.write((caller, operator), approved);
-            self.emit(Event::ApprovalForAll(ApprovalForAll { owner: caller, operator: operator, approved: approved }));
+            self
+                .emit(
+                    Event::ApprovalForAll(
+                        ApprovalForAll { owner: caller, operator: operator, approved: approved }
+                    )
+                );
         }
-        fn transferFrom(ref self: ContractState, from: ContractAddress, to: ContractAddress, tokenId: u256) {
+        fn transferFrom(
+            ref self: ContractState, from: ContractAddress, to: ContractAddress, tokenId: u256
+        ) {
             let caller = get_caller_address();
             assert(!caller.is_zero(), 'ERC721: caller is zero');
             assert(self._is_approved_or_owner(caller, tokenId), 'ERC721: not allowed');
             self._transfer(from, to, tokenId);
         }
-        fn safeTransferFrom(ref self: ContractState, from: ContractAddress, to: ContractAddress, tokenId: u256, data: Span<felt252>) {
+        fn safeTransferFrom(
+            ref self: ContractState,
+            from: ContractAddress,
+            to: ContractAddress,
+            tokenId: u256,
+            data: Span<felt252>
+        ) {
             let caller = get_caller_address();
             assert(!caller.is_zero(), 'ERC721: caller is zero');
             assert(self._is_approved_or_owner(caller, tokenId), 'ERC721: not allowed');
@@ -289,7 +310,9 @@ mod Project {
 
     #[generate_trait]
     impl InternalImpl of InternalTrait {
-        fn initializer(ref self: ContractState, name: felt252, symbol: felt252, owner: ContractAddress) {
+        fn initializer(
+            ref self: ContractState, name: felt252, symbol: felt252, owner: ContractAddress
+        ) {
             self.ERC721_name.write(name);
             self.ERC721_symbol.write(symbol);
             self.Ownable_owner.write(owner);
@@ -365,7 +388,9 @@ mod Project {
             assert(self._exist(token_id), 'ERC721: nonexistent token');
             self.ERC721_token_approvals.read(token_id)
         }
-        fn is_approved_for_all(self: @ContractState, owner: ContractAddress, operator: ContractAddress) -> bool {
+        fn is_approved_for_all(
+            self: @ContractState, owner: ContractAddress, operator: ContractAddress
+        ) -> bool {
             self.ERC721_operator_approvals.read((owner, operator))
         }
 
@@ -375,11 +400,16 @@ mod Project {
             let len = self.strings_len.read('uri');
             let mut uri: Array<felt252> = ArrayTrait::new();
             let mut index = 0;
+            let mut sstring: felt252 = 0;
             loop {
                 if index == len {
                     break;
                 }
-                uri.append(self.strings_data.read(('uri', index)));
+                if index != 0 && sstring == 0 {
+                    break;
+                }
+                sstring = self.strings_data.read(('uri', index));
+                uri.append(sstring);
                 index += 1;
             };
             uri
@@ -395,7 +425,9 @@ mod Project {
             assert(index < len, 'ERC721Enum: index out of bounds');
             self.ERC721Enumerable_all_tokens.read(index)
         }
-        fn token_of_owner_by_index(self: @ContractState, owner: ContractAddress, index: u256) -> u256 {
+        fn token_of_owner_by_index(
+            self: @ContractState, owner: ContractAddress, index: u256
+        ) -> u256 {
             let len = self.balance_of(owner);
             assert(index < len, 'ERC721Enum: index out of bounds');
             self.ERC721Enumerable_owned_tokens.read((owner, index))
@@ -404,10 +436,14 @@ mod Project {
 
     #[generate_trait]
     impl PrivateImpl of PrivateTrait {
-        fn _is_approved_or_owner(self: @ContractState, spender: ContractAddress, token_id: u256) -> bool {
+        fn _is_approved_or_owner(
+            self: @ContractState, spender: ContractAddress, token_id: u256
+        ) -> bool {
             assert(self._exist(token_id), 'ERC721: nonexistent token');
             let owner = self.owner_of(token_id);
-            spender == owner || self.get_approved(token_id) == spender || self.is_approved_for_all(owner, spender)
+            spender == owner
+                || self.get_approved(token_id) == spender
+                || self.is_approved_for_all(owner, spender)
         }
         fn _exist(self: @ContractState, token_id: u256) -> bool {
             let owner = self.ERC721_owners.read(token_id);
@@ -415,9 +451,16 @@ mod Project {
         }
         fn _approve(ref self: ContractState, to: ContractAddress, token_id: u256) {
             self.ERC721_token_approvals.write(token_id, to);
-            self.emit(Event::Approval(Approval { owner: self.owner_of(token_id), to: to, tokenId: token_id }));
+            self
+                .emit(
+                    Event::Approval(
+                        Approval { owner: self.owner_of(token_id), to: to, tokenId: token_id }
+                    )
+                );
         }
-        fn _transfer(ref self: ContractState, from: ContractAddress, to: ContractAddress, token_id: u256) {
+        fn _transfer(
+            ref self: ContractState, from: ContractAddress, to: ContractAddress, token_id: u256
+        ) {
             // ERC721Enumerable
             self._remove_token_from_owner_enumeration(from, token_id);
             self._add_token_to_owner_enumeration(to, token_id);
@@ -432,14 +475,23 @@ mod Project {
             self.ERC721_owners.write(token_id, to);
             self.emit(Event::Transfer(Transfer { from_: from, to: to, tokenId: token_id }));
         }
-        fn _safe_transfer(ref self: ContractState, from: ContractAddress, to: ContractAddress, token_id: u256, data: Span<felt252>) {
+        fn _safe_transfer(
+            ref self: ContractState,
+            from: ContractAddress,
+            to: ContractAddress,
+            token_id: u256,
+            data: Span<felt252>
+        ) {
             // ERC721Enumerable
             self._remove_token_from_owner_enumeration(from, token_id);
             self._add_token_to_owner_enumeration(to, token_id);
 
             // ERC721
             self._transfer(from, to, token_id);
-            assert(self._check_on_erc721_received(from, to, token_id, data), 'ERC721: non ERC721Receiver');
+            assert(
+                self._check_on_erc721_received(from, to, token_id, data),
+                'ERC721: non ERC721Receiver'
+            );
         }
         fn _burn(ref self: ContractState, token_id: u256) {
             // ERC721Enumerable
@@ -454,7 +506,13 @@ mod Project {
             self.ERC721_owners.write(token_id, zero);
             self.emit(Event::Transfer(Transfer { from_: owner, to: zero, tokenId: token_id }));
         }
-        fn _check_on_erc721_received(ref self: ContractState, from: ContractAddress, to: ContractAddress, token_id: u256, data: Span<felt252>) -> bool {
+        fn _check_on_erc721_received(
+            ref self: ContractState,
+            from: ContractAddress,
+            to: ContractAddress,
+            token_id: u256,
+            data: Span<felt252>
+        ) -> bool {
             let caller = get_caller_address();
             let receiver_erc165 = IERC165Dispatcher { contract_address: to };
 
@@ -464,15 +522,19 @@ mod Project {
                 assert(selector == IERC721_RECEIVER_ID, 'ERC721: invalid return selector');
                 return true;
             }
-            
+
             receiver_erc165.supportsInterface(IACCOUNT_ID)
         }
-        fn _add_token_to_owner_enumeration(ref self: ContractState, to: ContractAddress, token_id: u256) {
+        fn _add_token_to_owner_enumeration(
+            ref self: ContractState, to: ContractAddress, token_id: u256
+        ) {
             let len = self.balance_of(to);
             self.ERC721Enumerable_owned_tokens.write((to, len), token_id);
             self.ERC721Enumerable_owned_tokens_index.write(token_id, len);
         }
-        fn _remove_token_from_owner_enumeration(ref self: ContractState, from: ContractAddress, token_id: u256) {
+        fn _remove_token_from_owner_enumeration(
+            ref self: ContractState, from: ContractAddress, token_id: u256
+        ) {
             let last_token_index = self.balance_of(from) - 1;
             let token_index = self.ERC721Enumerable_owned_tokens_index.read(token_id);
 
@@ -492,7 +554,7 @@ mod Project {
             let token_index = self.ERC721Enumerable_all_tokens_index.read(token_id);
             let last_token_id = self.ERC721Enumerable_all_tokens.read(last_token_index);
 
-            self.ERC721Enumerable_all_tokens.write(last_token_index,0);
+            self.ERC721Enumerable_all_tokens.write(last_token_index, 0);
             self.ERC721Enumerable_all_tokens_index.write(token_id, 0);
             self.ERC721Enumerable_all_tokens_len.write(last_token_index);
 
