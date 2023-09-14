@@ -405,10 +405,10 @@ mod Project {
                 if index == len {
                     break;
                 }
+                sstring = self.strings_data.read(('uri', index));
                 if index != 0 && sstring == 0 {
                     break;
                 }
-                sstring = self.strings_data.read(('uri', index));
                 uri.append(sstring);
                 index += 1;
             };
@@ -564,4 +564,38 @@ mod Project {
             };
         }
     }
+}
+
+
+#[cfg(test)]
+mod Tests {
+    // Core deps
+    use array::ArrayTrait;
+    use debug::PrintTrait;
+
+    // Local deps
+    use super::Project::strings_data::InternalContractMemberStateTrait as StringsDataTrait;
+    use super::Project::strings_len::InternalContractMemberStateTrait as StringsLenTrait;
+    use super::Project;
+
+    fn STATE() -> Project::ContractState {
+        Project::contract_state_for_testing()
+    }
+
+    #[test]
+    #[available_gas(100_000_000)]
+    fn test_uri() {
+        let mut state = STATE();
+        state.strings_len.write('uri', 32);
+        state.strings_data.write(('uri', 0), 'https://');
+        state.strings_data.write(('uri', 1), 'path/');
+        state.strings_data.write(('uri', 2), 'to/');
+        state.strings_data.write(('uri', 3), 0);
+        state.strings_data.write(('uri', 4), 0);
+        let mut uri = Project::ERC721MetadataImpl::tokenURI(@state, 1);
+        assert(uri.len() == 4, 'Wrong uri len');
+        assert(uri == array!['https://', 'path/', 'to/', 'token.json'].span(), 'Wrong URI');
+    }
+
+
 }
